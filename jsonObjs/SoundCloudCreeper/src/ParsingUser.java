@@ -58,11 +58,11 @@ public class ParsingUser {
 				sb = getArrayOfThings("http://api.soundcloud.com/users/"+ user.getId() + "/tracks.json?client_id=f14fee2217f12c3314d1f3cccef8c07b");
 				array2 = parser.parse(sb.toString()).getAsJsonArray();
 				for(int j=0; j<user.getTrack_count(); j++){
-					track = gson.fromJson(array2.get(i), Track.class);
+					track = gson.fromJson(array2.get(j), Track.class);
 					users.addTrack(track, j);
 				}
 				allUsers.add(users);
-				System.out.println(user.getUsername());
+				System.out.println(user.getTrack_count());
 			}
 		}
         
