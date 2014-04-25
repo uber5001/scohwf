@@ -1,8 +1,8 @@
 <?
 $host = 'localhost';
 $dbname = 'soundcloud';
-$username = 'root'; // TODO change this to something more secure.. Something that can only access one database and not create or drop tables.
-$password = 'toor'; // TODO of course change this..
+$username = 'soundcloud'; // TODO change this to something more secure.. Something that can only access one database and not create or drop tables.
+$password = 'lab6-src'; // TODO of course change this..
 try {
 	$con = new PDO('mysql:host='. $host .';dbname='.$dbname, $username, $password);
 	$con->setAttribute( PDO::ATTR_EMULATE_PREPARES, false );
