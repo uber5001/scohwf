@@ -1,5 +1,8 @@
 package findOutlier;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Collections;
+import java.math.*;
 public class findOutlier {
 
 	
@@ -22,15 +25,15 @@ public class findOutlier {
 		if(u.track_count>1){
 			// finds outlier threshold 
 			calcOutlier(u);
-			return
+			return;
 			
 		}	
 		// if the user only has one track
 		else if(u.track_count==1){
 			if(u.track.get(0).playback_count>10000){
-				userWithOutliers.add(u);
+				usersWithOutliers.add(u);
 			}
-			return
+			return;
 		}
 		// if the user has no tracks
 		else
@@ -38,10 +41,34 @@ public class findOutlier {
 	}
 	
 	public void calcOutlier(User u){
-		int avg=0;
+		ArrayList <Track> lowHalf=new ArrayList<Track>();
+		ArrayList <Track> upHalf=new ArrayList<Track>();
+		int max=0;	
+		// sorts playbacks
+		Collections.sort(user.track);
+		double median= Median(user.track);
+		// gets the upper and lower halves of the playback counts
 		for(int i=0;i<user.track.size;i++){
-			
+			double playbacks=user.track.get(i).playback_count;	
+			if(playbacks<=median){
+				lowHalf.add(user.track);
+			}
+			else{
+				upHalf.add(user.track);
+			}
+			// get the biggest number of playbacks to compare
+			if(max<user.track.get(i).playback_count){
+				max=user.track.get(i).playback_count;					
+			}
 		}
+		double q1=Median(lowHalf);
+		double q3=Median(upHalf);
+		double iqr=q3-q1;
+		iqr=iqr*1.5;
+		if(max>=iqr){
+			usersWithOutliers.add(u);
+		}
+		return;
 	}
 
 }
