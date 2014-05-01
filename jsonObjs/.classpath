@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="SoundCloudCreeper/src"/>
 	<classpathentry kind="lib" path="SoundCloudCreeper/gson-2.2.4.jar"/>
+	<classpathentry kind="lib" path="mysql-connector-java-5.1.18.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="SoundCloudCreeper/bin"/>
 </classpath>

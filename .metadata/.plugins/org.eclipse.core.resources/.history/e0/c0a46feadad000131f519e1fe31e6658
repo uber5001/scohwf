@@ -1,0 +1,114 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+
+public class FindOutliers {
+	static Connection conn = null;
+	static {
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/soundcloud","root", "b532fwet4");
+		} catch (Exception e) {}
+	}
+	static int limit = 10000;
+
+	/*
+	 * public static ArrayList<Track> findOutliers(ArrayList<UserInfo> users) {
+	 * 
+	 * // creates Lists of Users and User with Outliers
+	 * 
+	 * // cycles through list to find tracks for (UserInfo u : users) {
+	 * checkTracks(u); } return outliers; }
+	 */
+	// adds Users that have outliers to UserswithTracks
+	public static void checkTracks(UserInfo user, ArrayList<Track> outliers) {
+		// checks if the current user has tracks
+		// if the user has more than one track
+		User u = user.getSelf();
+		Track[] tracks = user.getTracks();
+		if (tracks.length > 1) {
+			// System.out.println("YAY HAD TRACKS");
+			// finds outlier threshold
+			calcOutlier(user, outliers);
+			return;
+
+		} else if (tracks.length == 1) {
+			if (tracks[0].getPlayback_count() > limit) {
+				addOutlier(tracks[0],outliers);
+			}
+			return;
+		}
+		// if the user has no tracks
+		else {
+			// System.out.println("No tracks");
+			return;
+		}
+	}
+
+	public static void calcOutlier(UserInfo user, ArrayList<Track> outliers) {
+		ArrayList<Track> lowHalf = new ArrayList<Track>();
+		ArrayList<Track> upHalf = new ArrayList<Track>();
+		// sorts playbacks
+		User u = user.getSelf();
+		ArrayList<Track> tracks = new ArrayList<Track>(Arrays.asList(user
+				.getTracks()));
+
+		Collections.sort(tracks);
+		Track max_track = tracks.get(tracks.size()-1);
+		if (max_track.getPlayback_count() < limit) {
+			//System.out.println("Broke at 1st limit check");
+			return;
+		} else {
+			System.out.println(max_track.getPlayback_count() + " : " + tracks.get(0).getPlayback_count());
+		}
+		double median = median(tracks);
+		// gets the upper and lower halves of the playback counts
+		for (int i = 0; i < tracks.size(); i++) {
+			double playbacks = tracks.get(i).getPlayback_count();
+			if (playbacks <= median) {
+				lowHalf.add(tracks.get(i));
+			} else {
+				upHalf.add(tracks.get(i));
+			}
+			// get the biggest number of playbacks to compare
+		}
+
+		if (lowHalf.size() == 0 || upHalf.size() == 0) {
+			System.out.println("Broke at size check");
+			return;
+		}
+		double q1 = median(lowHalf);
+		double q3 = median(upHalf);
+		double iqr = q3 - q1;
+		double comp = iqr * 1.5 + q3;
+		if (tracks.get(tracks.size() - 1).getPlayback_count() >= (comp)) {
+			if (tracks.get(tracks.size() - 1).getPlayback_count() >= (comp))
+				return;
+			else {
+				System.out.println("Found outlier");
+				addOutlier(tracks.get(tracks.size() - 1),outliers);
+			}
+		}
+	}
+
+	private synchronized static void addOutlier(Track t, ArrayList<Track> outliers) {
+		if (outliers.size() == 100) {
+			System.out.println("Dumping outliers");
+			System.out.println("Outliers: "+outliers.size());
+			for(Track t1 : outliers ) {
+				System.out.println("id: "+t1.getId());
+				
+			}
+			outliers.clear();
+		}
+		
+		outliers.add(t);
+	}
+
+	private static double median(ArrayList<Track> tracks) {
+		return tracks.get(tracks.size() / 2).getPlayback_count();
+	}
+
+}

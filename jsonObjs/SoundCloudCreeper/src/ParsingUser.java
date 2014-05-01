@@ -5,7 +5,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.lang.StringBuilder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -14,6 +14,9 @@ import com.google.gson.JsonSyntaxException;
 
 
 public class ParsingUser {
+	static AtomicBoolean more = new AtomicBoolean(true);
+	static ArrayList<Track> outliers = new ArrayList<Track>();
+	static ArrayList<Thread> threads = new ArrayList<Thread>();
 	private static String getJson(String url) throws IOException{
 		//System.out.println(url);
 		URL url1 = null;
@@ -51,42 +54,59 @@ public class ParsingUser {
 		
 		for(int i=0; i<array.size(); i++){
 			user = gson.fromJson(array.get(i), User.class);
-			System.out.println(user.getUsername());
+			//System.out.println(user.getUsername());
 			if(user.getTrack_count() > 0){
 				
-				UserInfo userInfo = new UserInfo(user.getTrack_count()+1);
+				UserInfo userInfo = new UserInfo(user.getTrack_count() < 200 ? user.getTrack_count() : 200);
 				json = getJson("http://api.soundcloud.com/users/"+ user.getId() + "/tracks.json?client_id=f14fee2217f12c3314d1f3cccef8c07b&limit=500");
 				array2 = parser.parse(json).getAsJsonArray();
-				for(int j=0; j<user.getTrack_count(); j++){
+				for(int j=0; j<user.getTrack_count() && j < 200; j++){
 					track = gson.fromJson(array2.get(j), Track.class);
-					System.out.println("THIS IS A TRACK"+track.getId());
+					//System.out.println("THIS IS A TRACK"+track.getId());
 					userInfo.addTrack(track, j);
 				}
-				users.add(userInfo);
+				FindOutliers.checkTracks(userInfo,outliers);
 				//System.out.println(user.getTrack_count());
 			}
-			if(users.size() > 200)
-				return false;
 		}
 		return array.size() > 0;
 	}
 	
 	public static void main(String[] args) throws JsonSyntaxException, MalformedURLException, IOException {
-		ArrayList<UserInfo> users = new ArrayList<UserInfo>();
-		int limit = 50;
-		for(int i=0;i<100;i++) {
-			int offset = i * limit;
-			boolean more = getUsers(offset,limit,users);
-			if(!more)
+		final ArrayList<UserInfo> users = new ArrayList<UserInfo>();
+		final int limit = 50;
+		int max = 2000;
+		for(int i=0;i<max/limit;i++) {
+			final int offset = i * limit;
+			 Thread t = new Thread() { 
+				 public void run() {
+					 try {
+						more.set(getUsers(offset,limit,users));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
+				 }
+			 };
+			 threads.add(t);
+			 t.start();
+			System.out.println("Done with page "+(i+1)+"("+(i+1)*limit+")");
+			if(!more.get())
 				break;
 		}
-		System.out.println("Users: "+users.size());
-		
-		ArrayList<Track> outliers = FindOutliers.findOutliers(users);
-		System.out.println("Outliers: "+outliers.size());
-		for(Track t : outliers ) {
-			System.out.println("id: "+t.getId());
+		for(Thread t : threads) {
+			try {
+				t.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
+		System.out.println("Done!");
+		
+	//	System.out.println("Users: "+users.size());
+		
+		
 	}
 	
 	
