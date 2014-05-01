@@ -14,7 +14,8 @@ import com.google.gson.JsonSyntaxException;
 
 
 public class ParsingUser {
-	private static StringBuilder getArrayOfThings(String url) throws IOException{
+	private static String getJson(String url) throws IOException{
+		//System.out.println(url);
 		URL url1 = null;
 		try {
 			url1 = new URL(url);
@@ -33,19 +34,17 @@ public class ParsingUser {
 			sb.append(line + '\n');
 		}
 		
-		return sb;
+		return sb.toString();
 	}
-	public static void main(String[] args) throws JsonSyntaxException, MalformedURLException, IOException {
-       
-		StringBuilder sb = getArrayOfThings("http://api.soundcloud.com/users.json?client_id=f14fee2217f12c3314d1f3cccef8c07b");
+	private static boolean getUsers(int offset, int limit,ArrayList<UserInfo> users) throws IOException {
+
+		String json = getJson("http://api.soundcloud.com/users.json?client_id=f14fee2217f12c3314d1f3cccef8c07b&offset="+offset+"&limit="+limit);
 		
 		JsonParser parser = new JsonParser();
-		JsonArray array = parser.parse(sb.toString()).getAsJsonArray();
+		JsonArray array = parser.parse(json).getAsJsonArray();
 		
 		User user;
 		Track track;
-		Users users;
-		ArrayList<Users> allUsers = new ArrayList<Users>();
 		
 		JsonArray array2;
         Gson gson = new Gson();
@@ -54,17 +53,41 @@ public class ParsingUser {
 			user = gson.fromJson(array.get(i), User.class);
 			System.out.println(user.getUsername());
 			if(user.getTrack_count() > 0){
-				users = new Users(user.getTrack_count());
-				sb = getArrayOfThings("http://api.soundcloud.com/users/"+ user.getId() + "/tracks.json?client_id=f14fee2217f12c3314d1f3cccef8c07b");
-				array2 = parser.parse(sb.toString()).getAsJsonArray();
+				
+				UserInfo userInfo = new UserInfo(user.getTrack_count()+1);
+				json = getJson("http://api.soundcloud.com/users/"+ user.getId() + "/tracks.json?client_id=f14fee2217f12c3314d1f3cccef8c07b&limit=500");
+				array2 = parser.parse(json).getAsJsonArray();
 				for(int j=0; j<user.getTrack_count(); j++){
 					track = gson.fromJson(array2.get(j), Track.class);
-					users.addTrack(track, j);
+					System.out.println("THIS IS A TRACK"+track.getId());
+					userInfo.addTrack(track, j);
 				}
-				allUsers.add(users);
-				System.out.println(user.getTrack_count());
+				users.add(userInfo);
+				//System.out.println(user.getTrack_count());
 			}
+			if(users.size() > 200)
+				return false;
 		}
-        
-    }
+		return array.size() > 0;
+	}
+	
+	public static void main(String[] args) throws JsonSyntaxException, MalformedURLException, IOException {
+		ArrayList<UserInfo> users = new ArrayList<UserInfo>();
+		int limit = 50;
+		for(int i=0;i<100;i++) {
+			int offset = i * limit;
+			boolean more = getUsers(offset,limit,users);
+			if(!more)
+				break;
+		}
+		System.out.println("Users: "+users.size());
+		
+		ArrayList<Track> outliers = FindOutliers.findOutliers(users);
+		System.out.println("Outliers: "+outliers.size());
+		for(Track t : outliers ) {
+			System.out.println("id: "+t.getId());
+		}
+	}
+	
+	
 }

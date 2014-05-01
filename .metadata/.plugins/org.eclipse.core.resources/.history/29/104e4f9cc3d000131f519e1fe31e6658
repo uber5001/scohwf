@@ -1,0 +1,79 @@
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collections;
+import java.math.*;
+public class findOutlier {
+
+	
+	public static void findOutliers(ArrayList<UserInfo> users) {
+		// creates Lists of Users and User with Outliers
+		ArrayList <User> usersWithOutliers = new ArrayList<User>();
+		
+		// cycles through list to find tracks
+		for(int i=0;i<users.size();i++){
+				checkTracks(users.get(i));			
+		}
+
+	}
+	
+	// adds Users that have outliers to UserswithTracks
+	public static void checkTracks(UserInfo user){
+		// checks if the current user has tracks
+		// if the user has more than one track
+		User u = user.getSelf();
+		if(u.getTrack_count()>1){
+			// finds outlier threshold 
+			calcOutlier(u);
+			return;
+			
+		}
+		Track[] tracks = user.getTracks();
+		// if the user only has one track
+		else if(u.getTrack_count()==1){
+			if(u.track.get(0).playback_count>10000){
+				usersWithOutliers.add(u);
+			}
+			return;
+		}
+		// if the user has no tracks
+		else
+			return;
+	}
+	
+	public static void calcOutlier(User u){
+		ArrayList <Track> lowHalf=new ArrayList<Track>();
+		ArrayList <Track> upHalf=new ArrayList<Track>();
+		int max=0;	
+		// sorts playbacks
+		Collections.sort(user.track);
+		double median= Median(user.track);
+		// gets the upper and lower halves of the playback counts
+		for(int i=0;i<user.track.size;i++){
+			double playbacks=user.track.get(i).playback_count;	
+			if(playbacks<=median){
+				lowHalf.add(user.track);
+			}
+			else{
+				upHalf.add(user.track);
+			}
+			// get the biggest number of playbacks to compare
+			if(max<user.track.get(i).playback_count){
+				max=user.track.get(i).playback_count;					
+			}
+		}
+		double q1=median(lowHalf);
+		double q3=median(upHalf);
+		double iqr=q3-q1;
+		iqr=iqr*1.5;
+		if(max>=iqr){
+			usersWithOutliers.add(u);
+		}
+		return;
+	}
+
+	private double median(ArrayList<Track> tracks) {
+		return tracks.get(tracks.size() / 2).getPlayback_count();
+	}
+
+}
