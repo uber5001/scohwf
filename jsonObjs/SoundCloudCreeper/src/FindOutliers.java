@@ -98,7 +98,7 @@ public class FindOutliers {
 			if (tracks.get(tracks.size() - 1).getPlayback_count() >= (comp))
 				return;
 			else {
-				System.out.println("Found outlier");
+				System.out.println("Found outlier: "+u.getId());
 				try {
 					addOutlier(tracks.get(tracks.size() - 1),outliers);
 				} catch (SQLException e) {
@@ -112,7 +112,7 @@ public class FindOutliers {
 	private synchronized static void addOutlier(Track t, ArrayList<Track> outliers) throws SQLException {
 		outliers.add(t);
 		if (outliers.size() == 1) {
-			System.out.println("Dumping outliers");
+			System.out.println("Found outlier, dumping to database");
 			conn.setAutoCommit(false);
 			for(Track t1 : outliers ) {
 				Statement stmt = conn.createStatement();

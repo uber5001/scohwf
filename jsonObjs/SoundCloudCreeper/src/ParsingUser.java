@@ -6,6 +6,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -15,6 +16,7 @@ import com.google.gson.JsonSyntaxException;
 
 public class ParsingUser {
 	static AtomicBoolean more = new AtomicBoolean(true);
+	static AtomicInteger nThreads = new AtomicInteger(0);
 	static ArrayList<Track> outliers = new ArrayList<Track>();
 	static ArrayList<Thread> threads = new ArrayList<Thread>();
 	private static String getJson(String url) throws IOException{
@@ -39,24 +41,28 @@ public class ParsingUser {
 		
 		return sb.toString();
 	}
-	private static boolean getUsers(int offset, int limit,ArrayList<UserInfo> users) throws IOException {
 
-		String json = getJson("http://api.soundcloud.com/users.json?client_id=f14fee2217f12c3314d1f3cccef8c07b&offset="+offset+"&limit="+limit);
-		
+	private static void getUsers(int userid,ArrayList<UserInfo> users) throws IOException {
+		if(userid % 1000 == 0)
+			System.out.println("STARTING ID: "+userid);
+		String json;
+		try {
+		json = getJson("http://api.soundcloud.com/users/"+userid+".json?client_id=f14fee2217f12c3314d1f3cccef8c07b");
+		} catch (Exception e) {
+			return;
+		}
 		JsonParser parser = new JsonParser();
-		JsonArray array = parser.parse(json).getAsJsonArray();
+		
 		
 		User user;
 		Track track;
 		
 		JsonArray array2;
         Gson gson = new Gson();
-		
-		for(int i=0; i<array.size(); i++){
-			user = gson.fromJson(array.get(i), User.class);
-			//System.out.println(user.getUsername());
-			if(user.getTrack_count() > 0){
-				
+		user = gson.fromJson(json, User.class);
+		try {
+		if(user.getTrack_count() > 0){
+				//System.out.println("Had tracks");
 				UserInfo userInfo = new UserInfo(user.getTrack_count() < 200 ? user.getTrack_count() : 200);
 				json = getJson("http://api.soundcloud.com/users/"+ user.getId() + "/tracks.json?client_id=f14fee2217f12c3314d1f3cccef8c07b&limit=500");
 				array2 = parser.parse(json).getAsJsonArray();
@@ -68,31 +74,40 @@ public class ParsingUser {
 				FindOutliers.checkTracks(userInfo,outliers);
 				//System.out.println(user.getTrack_count());
 			}
+		} catch (Exception e) {
+			return;
 		}
-		return array.size() > 0;
 	}
 	
-	public static void main(String[] args) throws JsonSyntaxException, MalformedURLException, IOException {
+	public static void main(String[] args) {
+		try {
 		final ArrayList<UserInfo> users = new ArrayList<UserInfo>();
-		final int limit = 50;
-		int max = 2000;
-		for(int i=0;i<max/limit;i++) {
-			final int offset = i * limit;
-			 Thread t = new Thread() { 
-				 public void run() {
-					 try {
-						more.set(getUsers(offset,limit,users));
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} 
-				 }
-			 };
-			 threads.add(t);
-			 t.start();
-			System.out.println("Done with page "+(i+1)+"("+(i+1)*limit+")");
-			if(!more.get())
-				break;
+		final int start = 92972290;
+		for(int i=start;i>0;i--) {
+			if(nThreads.get() < 32) {
+			final int userid = i;
+				Thread t = new Thread() { 
+					 public void run() {
+						nThreads.incrementAndGet();
+						 try {
+							getUsers(userid,users);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						nThreads.decrementAndGet();
+					 }
+				 };
+				 threads.add(t);
+				 t.start();
+			 } else {
+				try {
+					getUsers(i,users);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 		for(Thread t : threads) {
 			try {
@@ -102,11 +117,14 @@ public class ParsingUser {
 				e.printStackTrace();
 			}
 		}
+
 		System.out.println("Done!");
 		
 	//	System.out.println("Users: "+users.size());
 		
-		
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	
